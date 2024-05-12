@@ -43,7 +43,10 @@ namespace img_lib {
 
 	// функция вычисления отступа по ширине
 	static int GetBMPStride(int width) {
-		return 4 * ((width * 3 + 3) / 4);
+		const int ALIGNMENT = 4;
+		const int COLOR_COUNT = 3;
+
+		return ALIGNMENT * ((width * COLOR_COUNT + COLOR_COUNT) / ALIGNMENT);
 	}
 
 	// напишите эту функцию
@@ -116,21 +119,35 @@ namespace img_lib {
 			fout.write(padding_buffer.data(), padding);
 		}
 
+		fout.close();
+
 		return true;
 	}
 
 	// напишите эту функцию
 	Image LoadBMP(const Path& file) {
 		ifstream fin(file, ios::binary);
-		if (!fin.is_open()) { return {}; }
+
+		if (!fin.is_open()) {
+			return {};
+		}
 
 		BitmapFileHeader bit_file_header;
 
 		fin.read(bit_file_header.type.data(), 2);
+
+		if (bit_file_header.type != BMP_TYPE) {
+			return {};
+		}
+
 		fin.read(reinterpret_cast<char*>(&bit_file_header.file_size), 4);
 		fin.read(reinterpret_cast<char*>(&bit_file_header.reserved_1), 2);
 		fin.read(reinterpret_cast<char*>(&bit_file_header.reserved_2), 2);
 		fin.read(reinterpret_cast<char*>(&bit_file_header.off_bits), 4);
+
+		if (bit_file_header.reserved_1 != BMP_RESERVED || bit_file_header.reserved_2 != BMP_RESERVED) {
+			return {};
+		}
 
 		// -------------------------------------
 
@@ -147,6 +164,17 @@ namespace img_lib {
 		fin.read(reinterpret_cast<char*>(&bit_info_header.y_pix_per_meter), 4);
 		fin.read(reinterpret_cast<char*>(&bit_info_header.color_used), 4);
 		fin.read(reinterpret_cast<char*>(&bit_info_header.color_important), 4);
+
+		if (bit_info_header.planes != BMP_PLANES
+			|| bit_info_header.bit_count != BMP_BIT_COUNT
+			|| bit_info_header.compression != BMP_COMPRESSION
+			|| bit_info_header.x_pix_per_meter != BMP_PIX_PER_METER
+			|| bit_info_header.y_pix_per_meter != BMP_PIX_PER_METER
+			|| bit_info_header.color_used != BMP_COLOR_USED
+			|| bit_info_header.color_important != BMP_COLOR_IMPORTANT)
+		{
+			return {};
+		}
 
 		// -------------------------------------
 
@@ -173,6 +201,12 @@ namespace img_lib {
 
 			fin.read(padding_buffer.data(), padding);
 		}
+
+		if (fin.fail() && !fin.eof()) {
+			return {};
+		}
+
+		fin.close();
 
 		return new_image;
 	}
