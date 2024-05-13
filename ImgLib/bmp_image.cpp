@@ -127,25 +127,27 @@ namespace img_lib {
 	// напишите эту функцию
 	Image LoadBMP(const Path& file) {
 		ifstream fin(file, ios::binary);
-
-		if (!fin.is_open()) {
-			return {};
-		}
+		if (!fin.is_open()) { return {}; }
 
 		BitmapFileHeader bit_file_header;
 
 		fin.read(bit_file_header.type.data(), 2);
-
-		if (bit_file_header.type != BMP_TYPE) {
-			return {};
-		}
+		if (bit_file_header.type != BMP_TYPE || !fin.good()) { return {}; }
 
 		fin.read(reinterpret_cast<char*>(&bit_file_header.file_size), 4);
-		fin.read(reinterpret_cast<char*>(&bit_file_header.reserved_1), 2);
-		fin.read(reinterpret_cast<char*>(&bit_file_header.reserved_2), 2);
-		fin.read(reinterpret_cast<char*>(&bit_file_header.off_bits), 4);
+		if (!fin.good()) { return {}; }
 
-		if (bit_file_header.reserved_1 != BMP_RESERVED || bit_file_header.reserved_2 != BMP_RESERVED) {
+		fin.read(reinterpret_cast<char*>(&bit_file_header.reserved_1), 2);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_file_header.reserved_2), 2);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_file_header.off_bits), 4);
+		if (bit_file_header.reserved_1 != BMP_RESERVED
+			|| bit_file_header.reserved_2 != BMP_RESERVED
+			|| !fin.good())
+		{
 			return {};
 		}
 
@@ -154,24 +156,44 @@ namespace img_lib {
 		BitmapInfoHeader bit_info_header;
 
 		fin.read(reinterpret_cast<char*>(&bit_info_header.struct_size), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.width), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.height), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.planes), 2);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.bit_count), 2);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.compression), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.img_size), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.x_pix_per_meter), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.y_pix_per_meter), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.color_used), 4);
-		fin.read(reinterpret_cast<char*>(&bit_info_header.color_important), 4);
+		if (!fin.good()) { return {}; }
 
+		fin.read(reinterpret_cast<char*>(&bit_info_header.width), 4);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.height), 4);
+		if (!fin.good()) { return {}; }
+		
+		fin.read(reinterpret_cast<char*>(&bit_info_header.planes), 2);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.bit_count), 2);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.compression), 4);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.img_size), 4);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.x_pix_per_meter), 4);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.y_pix_per_meter), 4);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.color_used), 4);
+		if (!fin.good()) { return {}; }
+
+		fin.read(reinterpret_cast<char*>(&bit_info_header.color_important), 4);
 		if (bit_info_header.planes != BMP_PLANES
 			|| bit_info_header.bit_count != BMP_BIT_COUNT
 			|| bit_info_header.compression != BMP_COMPRESSION
 			|| bit_info_header.x_pix_per_meter != BMP_PIX_PER_METER
 			|| bit_info_header.y_pix_per_meter != BMP_PIX_PER_METER
 			|| bit_info_header.color_used != BMP_COLOR_USED
-			|| bit_info_header.color_important != BMP_COLOR_IMPORTANT)
+			|| bit_info_header.color_important != BMP_COLOR_IMPORTANT
+			|| !fin.good())
 		{
 			return {};
 		}
@@ -192,6 +214,7 @@ namespace img_lib {
 			Color* line = new_image.GetLine(y);
 
 			fin.read(buffer.data(), image_width * 3);
+			if (!fin.good()) { return {}; }
 
 			for (int x = 0; x < image_width; ++x) {
 				line[x].b = static_cast<byte>(buffer[x * 3 + 0]);
@@ -200,6 +223,7 @@ namespace img_lib {
 			}
 
 			fin.read(padding_buffer.data(), padding);
+			if (!fin.good()) { return {}; }
 		}
 
 		if (fin.fail() && !fin.eof()) {
